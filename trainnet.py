@@ -58,7 +58,7 @@ def parse_args():
                       default=10000, type=int)
 
   parser.add_argument('--save_dir', dest='save_dir',
-                      help='directory to save models', default="model/trainmodel/",
+                      help='directory to save models', default="trainmodel",
                       nargs=argparse.REMAINDER)
   parser.add_argument('--nw', dest='num_workers',
                       help='number of worker to load data',
@@ -386,7 +386,8 @@ if __name__ == '__main__':
         rcnnclsloss.append(loss_rcnn_cls)
         rcnnboxloss.append(loss_rcnn_box)
         # for testing the save function
-        break
+        if len(jointloss) == 3:
+          break
         
         if args.use_tfboard:
           info = {
@@ -429,7 +430,6 @@ if __name__ == '__main__':
         'class_agnostic': args.class_agnostic,
       }, save_name)
       
-    os.path.join(output_dir, 'loss_faster_rcnn_{}_{}_{}_ROIALIGN_SAMPLE{}.npy'.format(epoch, step, cfg.ALIGN_SAMPLE_NUM*cfg.ALIGN_SAMPLE_NUM))
     print('save model: {}'.format(save_name))
 
     end = time.time()
@@ -438,9 +438,9 @@ if __name__ == '__main__':
     if epoch == 2:
       break
     
-np.save('{}jointloss.npy',jointloss)
-np.save('rpnclsloss.npy',rpnclsloss)
-np.save('rpnboxloss.npy',rpnboxloss)
-np.save('rcnnclsloss.npy',rcnnclsloss)
-np.save('rcnnboxloss.npy',rcnnboxloss)
-print('save loss info')
+# np.save('{}jointloss.npy',jointloss)
+# np.save('rpnclsloss.npy',rpnclsloss)
+# np.save('rpnboxloss.npy',rpnboxloss)
+# np.save('rcnnclsloss.npy',rcnnclsloss)
+# np.save('rcnnboxloss.npy',rcnnboxloss)
+# print('save loss info')
