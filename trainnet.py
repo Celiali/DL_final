@@ -83,9 +83,9 @@ def parse_args():
   parser.add_argument('--align_sample', dest='align_sample',
                       help='the number of points sample for alignment',
                       default=1, type=float)
-  parser.add_argument('--align', dest='alignState',
+  parser.add_argument('--poolmode', dest='poolingmode',
                       help='do roi pooling or roi alignment',
-                      default=False, type=boolean)
+                      default='pool', type=str)
       
 # config optimization
   parser.add_argument('--o', dest='optimizer',
@@ -207,7 +207,8 @@ if __name__ == '__main__':
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
-  cfg.CROP_RESIZE_WITH_MAX_POOL = args.alignState
+#   cfg.CROP_RESIZE_WITH_MAX_POOL = args.poolingmode
+  cfg.POOLING_MODE = args.poolingmode
   cfg.ALIGN_SAMPLE_NUM = args.align_sample
   
 
@@ -311,6 +312,14 @@ if __name__ == '__main__':
 
   iters_per_epoch = int(train_size / args.batch_size)
 
+  # array for storing training loss
+  jointloss = []
+  rpnclsloss = []
+  rpnboxloss = []
+  rcnnclsloss = []
+  rcnnboxloss = []
+  
+  
   for epoch in range(args.start_epoch, args.max_epochs + 1):
     # setting to train mode
     fasterRCNN.train()
@@ -371,6 +380,14 @@ if __name__ == '__main__':
         print("\t\t\tfg/bg=(%d/%d), time cost: %f" % (fg_cnt, bg_cnt, end-start))
         print("\t\t\trpn_cls: %.4f, rpn_box: %.4f, rcnn_cls: %.4f, rcnn_box %.4f" \
                       % (loss_rpn_cls, loss_rpn_box, loss_rcnn_cls, loss_rcnn_box))
+        jointloss.append(loss_temp)
+        rpnclsloss.append(loss_rpn_cls)
+        rpnboxloss.append(loss_rpn_box)
+        rcnnclsloss.append(loss_rcnn_cls)
+        rcnnboxloss.append(loss_rcnn_box)
+        # for testing the save function
+        break
+        
         if args.use_tfboard:
           info = {
             'loss': loss_temp,
@@ -396,10 +413,13 @@ if __name__ == '__main__':
         'class_agnostic': args.class_agnostic,
       }, save_name)
     else:
-      if cfg.CROP_RESIZE_WITH_MAX_POOL:
+      if cfg.POOLING_MODE == 'crop':
         save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}_ROIALIGN_SAMPLE{}.pth'.format(args.session, epoch, step, cfg.ALIGN_SAMPLE_NUM*cfg.ALIGN_SAMPLE_NUM))
-      else:
+      elif cfg.POOLING_MODE == 'pool':
         save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}_ROIPOOLING.pth'.format(args.session, epoch, step))
+      elif cfg.POOLING_MODE == 'align':
+        save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}_ORIGINALALIGN.pth'.format(args.session, epoch, step))
+      
       save_checkpoint({
         'session': args.session,
         'epoch': epoch + 1,
@@ -408,7 +428,19 @@ if __name__ == '__main__':
         'pooling_mode': cfg.POOLING_MODE,
         'class_agnostic': args.class_agnostic,
       }, save_name)
+      
+    os.path.join(output_dir, 'loss_faster_rcnn_{}_{}_{}_ROIALIGN_SAMPLE{}.npy'.format(epoch, step, cfg.ALIGN_SAMPLE_NUM*cfg.ALIGN_SAMPLE_NUM))
     print('save model: {}'.format(save_name))
 
     end = time.time()
     print(end - start)
+    # for testing the save function
+    if epoch == 2:
+      break
+    
+np.save('{}jointloss.npy',jointloss)
+np.save('rpnclsloss.npy',rpnclsloss)
+np.save('rpnboxloss.npy',rpnboxloss)
+np.save('rcnnclsloss.npy',rcnnclsloss)
+np.save('rcnnboxloss.npy',rcnnboxloss)
+print('save loss info')
