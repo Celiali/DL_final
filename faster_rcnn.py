@@ -32,8 +32,8 @@ class _fasterRCNN(nn.Module):
         self.RCNN_proposal_target = _ProposalTargetLayer(self.n_classes)
         self.RCNN_roi_pool = _RoIPooling(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
         self.RCNN_roi_align = RoIAlignAvg(cfg.POOLING_SIZE, cfg.POOLING_SIZE, 1.0/16.0)
-
-        self.grid_size = cfg.POOLING_SIZE * cfg.ALIGN_SAMPLE_NUM if cfg.CROP_RESIZE_WITH_MAX_POOL else cfg.POOLING_SIZE
+        
+        self.grid_size = cfg.POOLING_SIZE * cfg.ALIGN_SAMPLE_NUM if cfg.POOLING_MODE == 'crop' else cfg.POOLING_SIZE
         self.RCNN_roi_crop = _RoICrop()
 
     def forward(self, im_data, im_info, gt_boxes, num_boxes):
