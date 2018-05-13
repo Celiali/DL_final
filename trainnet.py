@@ -386,7 +386,7 @@ if __name__ == '__main__':
         rcnnclsloss.append(loss_rcnn_cls)
         rcnnboxloss.append(loss_rcnn_box)
         # for testing the save function
-        if len(jointloss) == 3:
+        if len(jointloss) == 2 or len(jointloss) == 4 or len(jointloss) == 6:
           break
         
         if args.use_tfboard:
