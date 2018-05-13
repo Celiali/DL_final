@@ -58,7 +58,7 @@ def parse_args():
                       default=10000, type=int)
 
   parser.add_argument('--save_dir', dest='save_dir',
-                      help='directory to save models', default="/srv/share/jyang375/models",
+                      help='directory to save models', default="model/",
                       nargs=argparse.REMAINDER)
   parser.add_argument('--nw', dest='num_workers',
                       help='number of worker to load data',
@@ -78,7 +78,15 @@ def parse_args():
   parser.add_argument('--cag', dest='class_agnostic',
                       help='whether perform class_agnostic bbox regression',
                       action='store_true')
-
+      
+  # sample number of alignment
+  parser.add_argument('--align_sample', dest='align_sample',
+                      help='the number of points sample for alignment',
+                      default=1, type=float)
+  parser.add_argument('--align', dest='alignState',
+                      help='do roi pooling or roi alignment',
+                      default=False, type=boolean)
+      
 # config optimization
   parser.add_argument('--o', dest='optimizer',
                       help='training optimizer',
@@ -181,7 +189,7 @@ if __name__ == '__main__':
       args.set_cfgs = ['ANCHOR_SCALES', '[4, 8, 16, 32]', 'ANCHOR_RATIOS', '[0.5,1,2]', 'MAX_NUM_GT_BOXES', '50']
 
   args.cfg_file = "cfgs/{}_ls.yml".format(args.net) if args.large_scale else "cfgs/{}.yml".format(args.net)
-
+      
   if args.cfg_file is not None:
     cfg_from_file(args.cfg_file)
   if args.set_cfgs is not None:
@@ -199,6 +207,10 @@ if __name__ == '__main__':
   # -- Note: Use validation set and disable the flipped to enable faster loading.
   cfg.TRAIN.USE_FLIPPED = True
   cfg.USE_GPU_NMS = args.cuda
+  cfg.CROP_RESIZE_WITH_MAX_POOL = args.alignState
+  cfg.ALIGN_SAMPLE_NUM = args.align_sample
+  
+
   imdb, roidb, ratio_list, ratio_index = combined_roidb(args.imdb_name)
   train_size = len(roidb)
 
@@ -238,7 +250,9 @@ if __name__ == '__main__':
 
   if args.cuda:
     cfg.CUDA = True
-
+  
+  
+      
   # initilize the network here.
   if args.net == 'vgg16':
     fasterRCNN = vgg16(imdb.classes, pretrained=True, class_agnostic=args.class_agnostic)
@@ -323,7 +337,7 @@ if __name__ == '__main__':
 
       loss = rpn_loss_cls.mean() + rpn_loss_box.mean() \
            + RCNN_loss_cls.mean() + RCNN_loss_bbox.mean()
-      loss_temp += loss.data[0]
+      loss_temp += loss.data.item()
 
       # backward
       optimizer.zero_grad()
@@ -345,10 +359,10 @@ if __name__ == '__main__':
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
         else:
-          loss_rpn_cls = rpn_loss_cls.data[0]
-          loss_rpn_box = rpn_loss_box.data[0]
-          loss_rcnn_cls = RCNN_loss_cls.data[0]
-          loss_rcnn_box = RCNN_loss_bbox.data[0]
+          loss_rpn_cls = rpn_loss_cls.data.item()
+          loss_rpn_box = rpn_loss_box.data.item()
+          loss_rcnn_cls = RCNN_loss_cls.data.item()
+          loss_rcnn_box = RCNN_loss_bbox.data.item()
           fg_cnt = torch.sum(rois_label.data.ne(0))
           bg_cnt = rois_label.data.numel() - fg_cnt
 
@@ -382,7 +396,10 @@ if __name__ == '__main__':
         'class_agnostic': args.class_agnostic,
       }, save_name)
     else:
-      save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}.pth'.format(args.session, epoch, step))
+      if cfg.CROP_RESIZE_WITH_MAX_POOL:
+        save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}_ROIALIGN_SAMPLE{}.pth'.format(args.session, epoch, step, cfg.ALIGN_SAMPLE_NUM*cfg.ALIGN_SAMPLE_NUM))
+      else:
+        save_name = os.path.join(output_dir, 'faster_rcnn_{}_{}_{}_ROIPOOLING.pth'.format(args.session, epoch, step))
       save_checkpoint({
         'session': args.session,
         'epoch': epoch + 1,
