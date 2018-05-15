@@ -162,7 +162,7 @@ if __name__ == '__main__':
         'faster_rcnn_{}_{}_{}_ROIPOOLING.pth'.format(args.checksession, args.checkepoch, args.checkpoint))
   elif args.poolingmode == 'crop':
       load_name = os.path.join(input_dir,
-        'faster_rcnn_{}_{}_{}_ROIALIGN_SAMPLE{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint,args.align_sample))
+        'faster_rcnn_{}_{}_{}_ROIALIGN_SAMPLE{}.pth'.format(args.checksession, args.checkepoch, args.checkpoint,args.align_sample**2))
 
   # initilize the network here.
   if args.net == 'vgg16':
